@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"star-wars-api/utils"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,33 +31,29 @@ type Person struct {
 
 func PeopleList() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var persons []Person
-		next := LIST_URL
-		i := 1
-		for next != "" {
-			var apiResponse utils.ApiResponse[Person]
-			err := utils.MakeRequest(fmt.Sprintf("%s?page=%d", LIST_URL, i), &apiResponse)
-			fmt.Printf("Iteracion %d", i)
-			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, utils.Response[any]{
-					Status: "error",
-					Detail: err.Error(),
-				})
-				return
-			}
-			if apiResponse.Next == nil {
-				next = ""
-			} else {
-				next = *apiResponse.Next
-			}
-			persons = append(persons, apiResponse.Results...)
-
-			i++
-
+		path := ctx.Request.URL.Path
+		page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+		var apiResponse utils.ApiResponse[Person]
+		err := utils.MakeRequest(fmt.Sprintf("%s?page=%d", LIST_URL, page), &apiResponse)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, utils.Response[any]{
+				Status: "error",
+				Detail: err.Error(),
+			})
+			return
 		}
-		ctx.JSON(http.StatusOK, utils.Response[[]Person]{
+		if apiResponse.Next != nil {
+			next := fmt.Sprintf("%s?page=%d", path, page+1)
+			apiResponse.Next = &next
+		}
+		if apiResponse.Previous != nil {
+			previous := fmt.Sprintf("%s?page=%d", path, page-1)
+			apiResponse.Previous = &previous
+		}
+
+		ctx.JSON(http.StatusOK, utils.Response[utils.ApiResponse[Person]]{
 			Status: "success",
-			Data:   persons,
+			Data:   apiResponse,
 		})
 	}
 }
