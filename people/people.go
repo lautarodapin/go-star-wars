@@ -9,8 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const LIST_URL = "https://swapi.dev/api/people/"
-const DETAIL_URL = "https://swapi.dev/api/people/%s/"
+var LIST_URL = fmt.Sprintf("%s/people/", utils.BASE_URL)
+var DETAIL_URL = LIST_URL + "%s/"
 
 type Person struct {
 	Name      string    `json:"name"`
